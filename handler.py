@@ -3,9 +3,12 @@ import logging
 import os
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 import sys
 =======
 import traceback
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 import uuid
 from typing import Any, Dict
@@ -13,6 +16,7 @@ from typing import Any, Dict
 import boto3
 from botocore.exceptions import BotoCoreError, ClientError
 
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 # Cold start global initialization
 logger = logging.getLogger()
@@ -312,4 +316,117 @@ def hello(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         "statusCode": 200,
         "body": json.dumps(body)
     }
+>>>>>>> Stashed changes
+=======
+# Structured logger configuration
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+# Example: Pre-initialize clients outside handler for cold start optimization
+try:
+    _session = boto3.Session()
+    # example: dynamodb_client = _session.client('dynamodb')
+except (BotoCoreError, ClientError) as e:
+    logger.error(f"Failed to initialize boto3 session: {e}")
+    _session = None
+
+def get_correlation_id(headers: Dict[str, Any]) -> str:
+    if headers:
+        cid = headers.get("X-Correlation-Id") or headers.get("x-correlation-id")
+        if cid:
+            return str(cid)
+    # Fallback to request id or create a new one
+    return str(uuid.uuid4())
+
+def sanitize_input(event: Dict[str, Any]) -> Dict[str, Any]:
+    # Example validation & sanitization; adapt as needed for real use cases
+    sanitized = {}
+    if not isinstance(event, dict):
+        raise ValueError("Event must be a dictionary")
+    sanitized['headers'] = event.get('headers', {}) if isinstance(event.get('headers', {}), dict) else {}
+    sanitized['body'] = event.get('body') if isinstance(event.get('body'), str) else ""
+    sanitized['httpMethod'] = event.get('httpMethod', "")
+    return sanitized
+
+def record_metric(metric_name: str, value: float, correlation_id: str) -> None:
+    # Placeholder for metrics; in practice integrate with CloudWatch Embedded Metric Format or X-Ray
+    logger.info(f"METRIC: {metric_name}={value} [correlation_id={correlation_id}]")
+
+def trace_event(event: Dict[str, Any], correlation_id: str) -> None:
+    # Placeholder for tracing; integrate with AWS X-Ray as needed
+    logger.info(f"TRACE: event received [correlation_id={correlation_id}]")
+
+def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+    """
+    AWS Lambda handler with error handling, logging, observability, and input validation.
+    """
+    try:
+        sanitized_event = sanitize_input(event)
+        correlation_id = get_correlation_id(sanitized_event.get('headers'))
+        trace_event(sanitized_event, correlation_id)
+
+        logger.info(f"Function '{context.function_name}' invoked with correlation_id={correlation_id}")
+
+        # Cold start optimizations can go here; resource usage example
+        if _session is None:
+            logger.error(f"boto3 session not initialized [correlation_id={correlation_id}]")
+            raise RuntimeError("Failed to initialize AWS resources")
+
+        # Example AWS SDK call pattern (replace with actual logic as needed)
+        # try:
+        #     result = dynamodb_client.list_tables()
+        # except (BotoCoreError, ClientError) as aws_err:
+        #     logger.error(f"Error calling AWS SDK: {aws_err} [correlation_id={correlation_id}]")
+        #     raise
+
+        # Custom business logic
+        response_body = {
+            "message": "Go Serverless v1.0! Your function executed successfully!",
+            "correlation_id": correlation_id,
+        }
+
+        record_metric("FunctionSuccess", 1, correlation_id)
+
+        return {
+            "statusCode": 200,
+            "headers": {
+                "Content-Type": "application/json",
+                "X-Correlation-Id": correlation_id
+            },
+            "body": json.dumps(response_body)
+        }
+
+    except ValueError as ve:
+        logger.error(f"Input validation error: {ve}")
+        record_metric("FunctionValidationError", 1, correlation_id if 'correlation_id' in locals() else None)
+        return {
+            "statusCode": 400,
+            "headers": {
+                "Content-Type": "application/json"
+            },
+            "body": json.dumps({"error": f"Bad Request: {ve}"})
+        }
+    except (BotoCoreError, ClientError) as aws_ex:
+        logger.error(f"AWS SDK error: {aws_ex}", exc_info=True)
+        record_metric("FunctionAWSError", 1, correlation_id if 'correlation_id' in locals() else None)
+        return {
+            "statusCode": 502,
+            "headers": {
+                "Content-Type": "application/json"
+            },
+            "body": json.dumps({"error": "AWS upstream error", "details": str(aws_ex)})
+        }
+    except Exception as ex:
+        logger.error(f"Unhandled exception: {ex}", exc_info=True)
+        record_metric("FunctionException", 1, correlation_id if 'correlation_id' in locals() else None)
+        return {
+            "statusCode": 500,
+            "headers": {
+                "Content-Type": "application/json"
+            },
+            "body": json.dumps({"error": "Internal server error"})
+        }
+
+# For Serverless Framework (handler mapped to lambda_handler)
+hello = lambda_handler
 >>>>>>> Stashed changes

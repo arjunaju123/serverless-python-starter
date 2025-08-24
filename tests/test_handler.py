@@ -1,5 +1,6 @@
 import unittest
 import logging
+<<<<<<< Updated upstream
 import os
 from typing import Any, Dict
 import uuid
@@ -23,10 +24,33 @@ if not logger.hasHandlers():
 # For observability
 def add_correlation_id(record, correlation_id: str) -> None:
     setattr(record, "correlation_id", correlation_id)
+=======
+import uuid
+from typing import Any, Dict
+
+from handler import hello
+
+# Structured logger setup
+logger = logging.getLogger("HandlerTest")
+logger.setLevel(logging.INFO)
+handler_stream = logging.StreamHandler()
+formatter = logging.Formatter(
+    '{"time": "%(asctime)s", "level": "%(levelname)s", "correlationId": "%(correlationId)s", "message": "%(message)s"}'
+)
+handler_stream.setFormatter(formatter)
+logger.addHandler(handler_stream)
+
+# Context manager for boto3 and other resources can be added here if needed in integration tests
+
+def log_with_correlation_id(correlation_id: str, msg: str, level: int = logging.INFO) -> None:
+    extra = {'correlationId': correlation_id}
+    logger.log(level, msg, extra=extra)
+>>>>>>> Stashed changes
 
 class HandlerTest(unittest.TestCase):
 
     def setUp(self) -> None:
+<<<<<<< Updated upstream
         # Generate a unique correlation ID (for tracing/observability)
         self.correlation_id = str(uuid.uuid4())
         # Add it to log records
@@ -90,3 +114,39 @@ class HandlerTest(unittest.TestCase):
 
         # Metric/trace: log successful completion
         logger.info(f"Completed test_event_failsWithNumberAsEvent", extra={"correlation_id": self.correlation_id})
+=======
+        # Generates a correlation ID per test
+        self.correlation_id = str(uuid.uuid4())
+        log_with_correlation_id(self.correlation_id, f"Starting test case: {self._testMethodName}")
+
+    def tearDown(self) -> None:
+        log_with_correlation_id(self.correlation_id, f"Finished test case: {self._testMethodName}")
+
+    def test_event_failsWithNumberAsEvent(self) -> None:
+        event = 1
+        context = 2
+
+        # Input validation
+        if not isinstance(event, (dict, str, int)):
+            log_with_correlation_id(self.correlation_id, "Invalid event type", logging.ERROR)
+            self.fail("Invalid event type passed to Lambda handler.")
+
+        # Metrics/Tracing stub (could be replaced with AWS Embedded Metrics or X-Ray)
+        log_with_correlation_id(self.correlation_id, "Invoking Lambda handler 'hello'")
+
+        try:
+            response: Dict[str, Any] = hello(event, context)
+            self.assertIsInstance(response, dict, "Handler did not return a dict response")
+
+            status_code = response.get('statusCode')
+            body = response.get('body')
+
+            self.assertEqual(status_code, 200, f"Expected statusCode 200, got {status_code}")
+            self.assertIsInstance(body, str, f"Expected body as str, got {type(body)}")
+
+            log_with_correlation_id(self.correlation_id, f"Test passed. statusCode={status_code}, body type={type(body).__name__}")
+        except Exception as exc:
+            log_with_correlation_id(self.correlation_id, f"Exception occurred: {exc}", logging.ERROR)
+            # Optionally: insert custom resource cleanup here if necessary
+            self.fail(f"Exception raised during handler invocation: {exc}")
+>>>>>>> Stashed changes
