@@ -1,3 +1,5 @@
+frameworkVersion: '3'
+
 service: serverless-stack-python-starter
 
 plugins:
@@ -9,14 +11,31 @@ custom:
 
 provider:
   name: aws
-  runtime: python3.6
+  runtime: python3.9
   stage: dev
   region: us-east-1
+  httpApi:
+    cors: true
 
 functions:
   hello:
     handler: handler.hello
+    memorySize: 128
+    timeout: 10
     events:
-      - http:
+      - httpApi:
           path: /
           method: get
+
+package:
+  patterns:
+    - '!test/**'
+    - '!tests/**'
+    - '!__pycache__/**'
+    - '!node_modules/**'
+    - '!*.md'
+    - '!*.log'
+    - '!package-lock.json'
+    - '!yarn.lock'
+    - '!venv/**'
+    - '**'
