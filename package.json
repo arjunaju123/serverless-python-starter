@@ -8,7 +8,10 @@
   },
   "scripts": {
     "test": "python -m unittest discover -s tests",
+<<<<<<< Updated upstream
     "sls": "serverless",
+=======
+>>>>>>> Stashed changes
     "deploy": "serverless deploy",
     "offline": "serverless offline"
   },

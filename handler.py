@@ -2,6 +2,7 @@ import json
 import logging
 import os
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 import sys
 =======
 import traceback
@@ -119,10 +120,52 @@ def create_correlation_id(event: Dict[str, Any]) -> str:
     correlation_id = (
         event.get("headers", {}).get("X-Correlation-Id") or
         event.get("requestContext", {}).get("requestId") or
+=======
+import uuid
+import boto3
+from botocore.exceptions import BotoCoreError, ClientError
+from typing import Any, Dict
+
+# Optimize logger creation for cold start
+logger = logging.getLogger(__name__)
+if not logger.hasHandlers():
+    logging.basicConfig(level=logging.INFO)
+logger.setLevel(logging.INFO)
+
+# Metrics (CloudWatch Embedded Metric Format)
+def log_metrics(correlation_id: str, success: bool) -> None:
+    metrics = {
+        "_aws": {
+            "Timestamp": int(round(__import__('time').time() * 1000)),
+            "CloudWatchMetrics": [
+                {
+                    "Namespace": "ServerlessApp",
+                    "Dimensions": [["FunctionName"]],
+                    "Metrics": [
+                        {"Name": "SuccessfulInvocation", "Unit": "Count"},
+                        {"Name": "FailedInvocation", "Unit": "Count"}
+                    ]
+                }
+            ]
+        },
+        "FunctionName": os.environ.get('AWS_LAMBDA_FUNCTION_NAME', 'Unspecified'),
+        "SuccessfulInvocation": int(success),
+        "FailedInvocation": int(not success),
+        "CorrelationId": correlation_id
+    }
+    print(json.dumps(metrics)) # CloudWatch EMF logs
+
+def get_correlation_id(event: Dict[str, Any]) -> str:
+    headers = event.get('headers', {})
+    correlation_id = (
+        headers.get('X-Correlation-Id') or
+        event.get('requestContext', {}).get('requestId') or
+>>>>>>> Stashed changes
         str(uuid.uuid4())
     )
     return correlation_id
 
+<<<<<<< Updated upstream
 def record_metric(metric_name: str, value: int = 1) -> None:
     # Example metric recording (CloudWatch Embedded Metric Format)
     try:
@@ -196,3 +239,77 @@ def hello(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             "body": json.dumps(error_body)
 >>>>>>> Stashed changes
         }
+=======
+def validate_event(event: Dict[str, Any]) -> None:
+    # Example: Validate required keys. Extend as needed.
+    if not isinstance(event, dict):
+        raise ValueError("Invalid event format: Expected a dictionary.")
+    # Further input validation can be added here
+
+def hello(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+    correlation_id = get_correlation_id(event)
+    logger.info(f"Function invoked. CorrelationId={correlation_id}")
+
+    # Security: input validation & sanitization
+    try:
+        validate_event(event)
+    except Exception as ve:
+        logger.error(f"Validation error. CorrelationId={correlation_id} Error={ve}")
+        log_metrics(correlation_id, success=False)
+        return {
+            "statusCode": 400,
+            "body": json.dumps({
+                "message": "Invalid input.",
+                "correlationId": correlation_id
+            })
+        }
+    # Tracing: Example with AWS X-Ray if available (no-op if not)
+    try:
+        from aws_xray_sdk.core import patch_all
+        patch_all()  # Patch boto3, requests, etc. for tracing
+    except ImportError:
+        pass
+
+    # Sample AWS SDK interaction, e.g., describe Lambda function (replace with real usage)
+    boto3_client = None
+    try:
+        boto3_client = boto3.client('lambda')
+        function_name = os.environ.get('AWS_LAMBDA_FUNCTION_NAME', '')
+        if function_name:
+            response = boto3_client.get_function(FunctionName=function_name)
+            logger.info(f"Retrieved function info. CorrelationId={correlation_id}")
+        # Close the client if necessary
+        # boto3 clients do not require explicit close but for resource APIs like DynamoDB this would change
+    except (BotoCoreError, ClientError) as aws_err:
+        logger.error(f"AWS SDK error. CorrelationId={correlation_id} Error={aws_err}")
+        log_metrics(correlation_id, success=False)
+        return {
+            "statusCode": 500,
+            "body": json.dumps({
+                "message": "Internal AWS error.",
+                "correlationId": correlation_id
+            })
+        }
+    except Exception as ex:
+        logger.error(f"Unexpected error. CorrelationId={correlation_id} Error={ex}")
+        log_metrics(correlation_id, success=False)
+        return {
+            "statusCode": 500,
+            "body": json.dumps({
+                "message": "Unexpected error.",
+                "correlationId": correlation_id
+            })
+        }
+
+    # Observability: record success metric
+    log_metrics(correlation_id, success=True)
+    body = {
+        "message": "Go Serverless v1.0! Your function executed successfully!",
+        "correlationId": correlation_id
+    }
+    logger.info(f"Function succeeded. CorrelationId={correlation_id}")
+    return {
+        "statusCode": 200,
+        "body": json.dumps(body)
+    }
+>>>>>>> Stashed changes
