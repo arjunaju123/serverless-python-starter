@@ -1,4 +1,8 @@
 frameworkVersion: '3'
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
 service: serverless-stack-python-starter
 
 plugins:
@@ -23,6 +27,15 @@ package:
     - '!tests/**'
     - '!*.md'
     - '!*.log'
+
+package:
+  patterns:
+    - '!node_modules/**'
+    - '!test/**'
+    - '!tests/**'
+    - '!__pycache__/**'
+    - '!*.md'
+    - '!*.tmp'
 
 functions:
   hello:

@@ -9,8 +9,12 @@
   "scripts": {
     "test": "python -m unittest discover -s tests",
     "sls": "serverless",
+<<<<<<< Updated upstream
     "deploy": "serverless deploy",
     "offline": "serverless offline"
+=======
+    "serverless": "serverless"
+>>>>>>> Stashed changes
   },
   "repository": {
     "type": "git",
@@ -31,6 +35,10 @@
     "serverless-offline": "^13.3.0"
   },
   "engines": {
+<<<<<<< Updated upstream
     "node": ">=14.0.0"
+=======
+    "node": ">=14.19.0"
+>>>>>>> Stashed changes
   }
 }
