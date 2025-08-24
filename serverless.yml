@@ -1,4 +1,8 @@
 frameworkVersion: '3'
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
 service: serverless-stack-python-starter
 
 plugins:
@@ -10,7 +14,11 @@ custom:
 
 provider:
   name: aws
+<<<<<<< Updated upstream
   runtime: python3.12
+=======
+  runtime: python3.9
+>>>>>>> Stashed changes
   stage: dev
   region: us-east-1
   memorySize: 256
@@ -18,9 +26,18 @@ provider:
   environment:
     EXAMPLE_ENV_VAR: value
 
+package:
+  patterns:
+    - '!node_modules/**'
+    - '!test/**'
+    - '!tests/**'
+    - '**/*'
+
 functions:
   hello:
     handler: handler.hello
+    memorySize: 128
+    timeout: 6
     events:
       - httpApi:
           path: /

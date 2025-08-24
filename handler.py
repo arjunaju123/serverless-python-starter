@@ -1,13 +1,18 @@
 import json
 import logging
 import os
+<<<<<<< Updated upstream
 import sys
+=======
+import traceback
+>>>>>>> Stashed changes
 import uuid
 from typing import Any, Dict
 
 import boto3
 from botocore.exceptions import BotoCoreError, ClientError
 
+<<<<<<< Updated upstream
 # Cold start global initialization
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -95,4 +100,99 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             "statusCode": 500,
             "body": json.dumps({"error": "Internal Server Error", "correlation_id": correlation_id}),
             "headers": {"X-Correlation-Id": correlation_id}
+=======
+# Initialize logger at module load for cold start optimization
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+def sanitize_input(event: Dict[str, Any]) -> Dict[str, Any]:
+    # Basic sanitization: ensure event is dict and has expected keys
+    if not isinstance(event, dict):
+        raise ValueError("Event must be a dictionary.")
+    for key in event.keys():
+        if not isinstance(key, str):
+            raise ValueError(f"Invalid key type: {type(key)}")
+    return event
+
+def create_correlation_id(event: Dict[str, Any]) -> str:
+    # Extract correlation ID from event or generate new
+    correlation_id = (
+        event.get("headers", {}).get("X-Correlation-Id") or
+        event.get("requestContext", {}).get("requestId") or
+        str(uuid.uuid4())
+    )
+    return correlation_id
+
+def record_metric(metric_name: str, value: int = 1) -> None:
+    # Example metric recording (CloudWatch Embedded Metric Format)
+    try:
+        print(json.dumps({
+            "_aws": {
+                "Timestamp": int(os.environ.get("AWS_LAMBDA_FUNCTION_START_TIME", "0")) or 0,
+                "CloudWatchMetrics": [
+                    {
+                        "Namespace": "ServerlessApp",
+                        "Dimensions": ["FunctionName"],
+                        "Metrics": [{"Name": metric_name, "Unit": "Count"}]
+                    }
+                ]
+            },
+            "FunctionName": os.environ.get("AWS_LAMBDA_FUNCTION_NAME", "Unknown"),
+            metric_name: value
+        }))
+    except Exception as e:
+        logger.warning(f"Metric recording failed: {e}")
+
+def hello(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+    correlation_id = create_correlation_id(event)
+    logger.info(f"Request received, correlation_id={correlation_id}")
+    record_metric("InvocationCount", 1)
+    try:
+        safe_event = sanitize_input(event)
+
+        # Example AWS SDK usage (boto3, e.g., get current AWS account)
+        client = boto3.client("sts")
+        try:
+            identity = client.get_caller_identity()
+            account_id = identity.get("Account")
+        except (BotoCoreError, ClientError) as aws_err:
+            logger.error(f"AWS error (correlation_id={correlation_id}): {aws_err}")
+            account_id = "Unknown"
+        finally:
+            client.close() if hasattr(client, "close") else None  # For resource cleanup
+
+        body = {
+            "message": (
+                "Go Serverless v3.0! Your function executed successfully!"
+            ),
+            "correlation_id": correlation_id,
+            "account_id": account_id,
+        }
+
+        logger.info(
+            f"Response success (correlation_id={correlation_id}) "
+            f"body={body}"
+        )
+        record_metric("SuccessCount", 1)
+        return {
+            "statusCode": 200,
+            "body": json.dumps(body)
+        }
+
+    except Exception as exc:
+        err_trace = traceback.format_exc()
+        logger.error(
+            f"Unhandled exception (correlation_id={correlation_id}): {exc}",
+            extra={"traceback": err_trace}
+        )
+        record_metric("ErrorCount", 1)
+        error_body = {
+            "error": "Internal Server Error",
+            "correlation_id": correlation_id,
+            "details": str(exc),
+        }
+        return {
+            "statusCode": 500,
+            "body": json.dumps(error_body)
+>>>>>>> Stashed changes
         }
