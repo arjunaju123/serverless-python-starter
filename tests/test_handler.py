@@ -1,9 +1,16 @@
 import unittest
 import logging
 import uuid
+<<<<<<< Updated upstream
 import os
 from typing import Any, Dict
 from unittest.mock import patch
+=======
+from typing import Any, Dict
+
+import boto3
+from botocore.exceptions import BotoCoreError, ClientError
+>>>>>>> Stashed changes
 
 # If AWS SDK needed:
 import boto3
@@ -69,8 +76,46 @@ def hello(event: Any, context: Any) -> Dict[str, Any]:
             "correlationId": correlation_id
         }
 
+logger = logging.getLogger("handler_test")
+logger.setLevel(logging.INFO)
+handler = logging.StreamHandler()
+formatter = logging.Formatter(
+    '{"event":"%(event)s","correlation_id":"%(correlation_id)s","level":"%(levelname)s","message":"%(message)s"}'
+)
+handler.setFormatter(formatter)
+if not logger.hasHandlers():
+    logger.addHandler(handler)
+
+def put_metric(metric_name: str, value: float = 1.0, correlation_id: str = '') -> None:
+    try:
+        client = boto3.client("cloudwatch")
+        client.put_metric_data(
+            Namespace="HandlerTest",
+            MetricData=[
+                {
+                    "MetricName": metric_name,
+                    "Value": value,
+                    "Unit": "Count",
+                    "Dimensions": [
+                        {"Name": "CorrelationId", "Value": correlation_id},
+                    ],
+                }
+            ],
+        )
+    except (BotoCoreError, ClientError) as e:
+        logger.error(f"Failed to put metric: {e}", extra={"event": "put_metric", "correlation_id": correlation_id})
+
+def validate_input(event: Any, context: Any, correlation_id: str) -> None:
+    if not isinstance(event, (dict, int, str, float, type(None))):
+        logger.warning(
+            f"Unsupported input type: {type(event)}",
+            extra={"event": "input_validation", "correlation_id": correlation_id}
+        )
+        raise ValueError("Unsupported input type")
+
 class HandlerTest(unittest.TestCase):
 
+<<<<<<< Updated upstream
     @patch('handler.hello', side_effect=hello)
     def test_event_failsWithNumberAsEvent(self, mock_hello):
         correlation_id = get_correlation_id(1)
@@ -100,3 +145,31 @@ class HandlerTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+=======
+    def setUp(self) -> None:
+        self.correlation_id = str(uuid.uuid4())
+
+    def tearDown(self) -> None:
+        pass  # Any resource cleanup if needed
+
+    def test_event_failsWithNumberAsEvent(self) -> None:
+        event = 1
+        context = 2
+        try:
+            validate_input(event, context, self.correlation_id)
+            logger.info(
+                f"Calling hello handler",
+                extra={"event": "call_handler", "correlation_id": self.correlation_id}
+            )
+            response: Dict[str, Any] = hello(event, context)
+            put_metric("HandlerTestSuccess", 1, self.correlation_id)
+            self.assertEqual(response.get("statusCode"), 200)
+            self.assertIsInstance(response.get("body"), str)
+        except Exception as exc:
+            put_metric("HandlerTestFailure", 1, self.correlation_id)
+            logger.exception(
+                f"Exception occurred during test_event_failsWithNumberAsEvent: {exc}",
+                extra={"event": "exception", "correlation_id": self.correlation_id}
+            )
+            self.fail(f"Exception occurred during test_event_failsWithNumberAsEvent: {exc}")
+>>>>>>> Stashed changes

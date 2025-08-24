@@ -1,5 +1,8 @@
 frameworkVersion: '3'
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
 service: serverless-stack-python-starter
 
 provider:
@@ -17,6 +20,7 @@ custom:
   pythonRequirements:
     dockerizePip: false
 
+<<<<<<< Updated upstream
 package:
   patterns:
     - '!tests/**'
@@ -26,6 +30,15 @@ package:
     - '!node_modules/**'
     - '!package-lock.json'
     - '!serverless.yml'
+=======
+provider:
+  name: aws
+  runtime: python3.9
+  stage: dev
+  region: us-east-1
+  httpApi:
+    cors: true
+>>>>>>> Stashed changes
 
 functions:
   hello:
@@ -35,4 +48,17 @@ functions:
     events:
       - httpApi:
           path: /
+<<<<<<< Updated upstream
           method: get
+=======
+          method: get
+
+package:
+  patterns:
+    - '!node_modules/**'
+    - '!test/**'
+    - '!tests/**'
+    - '!*.md'
+    - '!*.log'
+    - '**/*'
+>>>>>>> Stashed changes

@@ -1,5 +1,6 @@
 import json
 import logging
+<<<<<<< Updated upstream
 import uuid
 import os
 from typing import Any, Dict
@@ -62,12 +63,79 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         }
         record_metric('successful_execution', 1, correlation_id)
         trace_event('lambda_success', body, correlation_id)
+=======
+import os
+import uuid
+from typing import Any, Dict
+
+import boto3
+from botocore.exceptions import BotoCoreError, ClientError
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+
+def get_correlation_id(event: Dict[str, Any]) -> str:
+    # Try to extract correlation ID from event or headers, else generate
+    correlation_id = (
+        event.get("headers", {}).get("X-Correlation-Id")
+        or event.get("requestContext", {}).get("requestId")
+        or str(uuid.uuid4())
+    )
+    return correlation_id
+
+
+def validate_event(event: Dict[str, Any]) -> None:
+    # Example validation for API Gateway (REST or HTTP API)
+    if not isinstance(event, dict):
+        raise ValueError("Event must be a dict")
+    # Add further validation rules as needed (e.g. required fields)
+
+
+def record_metric(correlation_id: str, outcome: str) -> None:
+    # Example: Log a simple custom metric
+    logger.info(f"METRIC|hello_invocation|outcome={outcome}|correlation_id={correlation_id}")
+    # For full integration, use CloudWatch embedded metric format (EMF) or AWS SDK
+
+
+def trace_execution(correlation_id: str, message: str) -> None:
+    # Basic trace event
+    logger.info(f"TRACE|correlation_id={correlation_id}|event={message}")
+
+
+def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+    correlation_id: str = get_correlation_id(event)
+    # Log the incoming event (truncate for brevity/security)
+    logger.info(f"Received event|correlation_id={correlation_id}|event_type={type(event)}")
+    trace_execution(correlation_id, "Handler invoked")
+
+    try:
+        validate_event(event)
+        # Example AWS SDK interaction (get AWS account user ARN)
+        sts_client = boto3.client("sts")
+        try:
+            identity = sts_client.get_caller_identity()
+            aws_account_id = identity.get("Account", "unknown")
+            logger.info(f"AWS account accessed|account_id={aws_account_id}|correlation_id={correlation_id}")
+        except (BotoCoreError, ClientError) as aws_exc:
+            logger.error(f"AWS SDK error|error={aws_exc}|correlation_id={correlation_id}")
+            aws_account_id = "error_retrieving"
+            record_metric(correlation_id, "aws_sdk_error")
+
+        body = {
+            "message": f"Go Serverless v1.0! Your function executed successfully! AWS Account: {aws_account_id}",
+            "correlation_id": correlation_id,
+        }
+        record_metric(correlation_id, "success")
+        trace_execution(correlation_id, "Success response constructed")
+>>>>>>> Stashed changes
 
         return {
             "statusCode": 200,
             "body": json.dumps(body)
         }
 
+<<<<<<< Updated upstream
     except ValueError as ve:
         logger_adapter.error(f"Input validation error: {ve}", exc_info=True)
         record_metric('validation_error', 1, correlation_id)
@@ -87,3 +155,32 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
 # For the Serverless Framework config:
 # entrypoint = handler.lambda_handler
+=======
+    except ValueError as val_err:
+        logger.error(f"Input validation failed|error={val_err}|correlation_id={correlation_id}")
+        record_metric(correlation_id, "validation_error")
+        trace_execution(correlation_id, f"Validation error: {val_err}")
+
+        return {
+            "statusCode": 400,
+            "body": json.dumps({
+                "error": "Bad Request",
+                "message": str(val_err),
+                "correlation_id": correlation_id
+            })
+        }
+
+    except Exception as exc:
+        logger.exception(f"Unhandled error|correlation_id={correlation_id}|error={exc}")
+        record_metric(correlation_id, "exception")
+        trace_execution(correlation_id, f"Exception: {exc}")
+
+        return {
+            "statusCode": 500,
+            "body": json.dumps({
+                "error": "Internal Server Error",
+                "message": "An unexpected error occurred.",
+                "correlation_id": correlation_id
+            })
+        }
+>>>>>>> Stashed changes
