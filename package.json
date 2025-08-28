@@ -7,7 +7,10 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "python -m unittest discover -s tests"
+    "test": "python -m unittest discover -s tests",
+    "sls": "serverless",
+    "deploy": "serverless deploy",
+    "offline": "serverless offline"
   },
   "repository": {
     "type": "git",
@@ -20,6 +23,14 @@
   },
   "homepage": "https://github.com/AnomalyInnovations/serverless-stack-python-starter#readme",
   "dependencies": {
-    "serverless-python-requirements": "^3.0.9"
+    "serverless-python-requirements": "^6.1.0"
+  },
+  "devDependencies": {
+    "serverless": "^3.38.0",
+    "serverless-webpack": "^5.13.0",
+    "serverless-offline": "^13.3.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
   }
 }
